@@ -14,7 +14,7 @@ bot = telegram.Bot(token= configs.Telegram_Token)
 
 def Send_Telegram_Message(TelegramID, Text):
     bot.sendMessage(int(TelegramID), Text)
-    sleep(round(rdmf(0.5,1.2),2))
+    sleep(round(rdmf(1,3),2))
     
 
 def Send_Telegram_Attachments(TelegramID, List_Paths):
@@ -22,6 +22,6 @@ def Send_Telegram_Attachments(TelegramID, List_Paths):
     
         with open(pdf, "rb") as doc:
             bot.sendDocument(int(TelegramID),document=doc)
-            sleep(round(rdmf(0.5,1.9),2))
+            sleep(round(rdmf(2,5),2))
 
 

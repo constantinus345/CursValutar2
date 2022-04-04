@@ -86,7 +86,10 @@ def user_registered_dict(user_mail, table= configs.Table_Users_Registered, engin
     codes =  ",".join( df_codes["apl_codes_string"].tolist())
     #TODO extract phones by condition - starts with 373 and len=, starts with 6 or 7 and len=.
     #phone now as list
-    phone = ",".join( df_codes["phone"].tolist())
+    try:
+        phone = ",".join( df_codes["phone"].tolist())
+    except TypeError:
+        phone = "00"
     #print(phone)
     try:
         telegramid =  ",".join( str(x) for x in df_codes["telegram_user_id"].tolist())

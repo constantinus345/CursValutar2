@@ -5,7 +5,6 @@ import configs
 import pandas as pd
 from sqlalchemy import create_engine
 from unidecode import unidecode as deaccent
-from difflib import get_close_matches
 from time import time, sleep
 from Other_Functions import Diff_Lists
 from DB_funcs import remove_duplicates, insert_df_data, remove_duplicates_2cols
@@ -44,6 +43,8 @@ def df_drive(spreadsheet_key, type_sheet):
     return df_User
 
 def Retrive_and_update_customers_sb():
+    Report_Rows_Inserted = 0
+
     current_time = int(time()) #Unix epoch time
     df_convoca_drive = df_drive(drive_convoca_key, "sedinte")
     df_convoca_drive.to_excel(f"Forms_Customers/Convoca_{current_time}.xlsx")
@@ -73,7 +74,11 @@ def Retrive_and_update_customers_sb():
         
         if len(df1["email_address"].tolist()[0]) > 6:
             insert_df_data(df1, enginex, configs.Table_Users_Registered, if_exists="replace")
+            Report_Rows_Inserted += 1
             #print(f"Inserted {x1} out of {len(df_joined)}")
+
+    if Report_Rows_Inserted > 0:
+        Send_Telegram_Message(configs.Telegram_Constantin, f"New subscribers inserted = {Report_Rows_Inserted} from drive to Postgres")
 
     remove_duplicates_2cols(enginex, configs.Table_Users_Registered, "timestamp", "email_address")
 #remove_duplicates(engine, table, dupl_column)
@@ -141,22 +146,17 @@ def APL_and_Codes(engine=enginex):
     with engine.connect() as conn:
         df_apls = pd.read_sql(query, con=conn)
 
+    df_apls = df_apls.astype(str)
+
+    # sorting by first name
+    df_apls.sort_values("denumire_apl", inplace = True)
+ 
+    # dropping ALL duplicate values
+    df_apls.drop_duplicates(subset ="denumire_apl", inplace = True)
+
     APL_List_all = df_apls["denumire_apl"].tolist()
     APL_Code_all = df_apls["cod_apl"].tolist()
     return {"APLs":APL_List_all, "Codes":APL_Code_all}
-
-APL_List_all = [x.split(",")[0] for x in APL_and_Codes()["APLs"]]
-APL_Code_all = APL_and_Codes()["Codes"]
-
-def guessing_apl(name):
-    Close_Match= get_close_matches(name, APL_List_all, n=2, cutoff=0.1)[0]
-    return [Close_Match, APL_Code_all[APL_List_all.index(Close_Match)]]
-
-
-def aplname_from_code(code):
-    cod_index= APL_Code_all.index(int(code))
-    APL_name = APL_List_all[cod_index]
-    return APL_name
 
 def report_announced(unixtimestamp ,user_name, apl_name, apl_code, user_email, url_doc, channel_type,channel_value):
 

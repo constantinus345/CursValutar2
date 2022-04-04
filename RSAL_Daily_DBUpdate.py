@@ -9,6 +9,7 @@ from sqlalchemy import create_engine
 from Request_Functions import Request_RSAL, Dict_One_Doc,List_Hrefs_Codes
 from DB_funcs import insert_df_data, codesrsal, existing_URLs_sql, remove_duplicates
 from Other_Functions import Diff_Lists
+from Telegram_funcs import Send_Telegram_Message
 
 timing1= timing()
 
@@ -24,10 +25,11 @@ iDisplayStart = str(0)
 total_reqs=0
 print("Starting")
 
+RSAL_Daily_Report = 0
 #[::-1] for reversed
 for apl_cod in codesrsal_list:
 #for apl_cod in [19100]:
-
+    
     Response1 = Request_RSAL(iDisplayLength,apl_cod,iDisplayStart)
     
     URLs_Response= List_Hrefs_Codes(Response1)
@@ -51,12 +53,17 @@ for apl_cod in codesrsal_list:
 
         with engine.connect() as conn:
             dfx.to_sql(f'{configs.Table_RSAL_Data}', con=conn, if_exists="append",index=False)
-
+            RSAL_Daily_Report += 1
         sleep(round(rdm(0.02,0.05),2))
     sleep(round(rdm(0.1,0.3),2))
 
-remove_duplicates(engine=engine, table= "rsal_data")
+remove_duplicates(table= "rsal_data", dupl_column= "url_decizie",engine=engine)
+
+
 
 timing2 = timing()
 took= round(timing2-timing1, 2)
 print(f"Took {took} secs")
+
+if RSAL_Daily_Report> 0:
+    Send_Telegram_Message(configs.Telegram_Constantin, f"Downloaded {RSAL_Daily_Report} rows/links from RSAL_daily.\nTook {took} seconds")

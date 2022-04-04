@@ -62,7 +62,7 @@ for apl_cod in codesrsal_list:
 
     #sleep(round(rdm(0.1,0.4),2))
 
-remove_duplicates(engine=engine, table= "rsal_data")
+remove_duplicates(table= "rsal_data", dupl_column= "url_decizie",engine=engine)
 
 
 timing2 = timing()

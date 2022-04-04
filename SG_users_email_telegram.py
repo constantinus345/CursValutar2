@@ -12,7 +12,7 @@ from DB_funcs import codes_users_unique, email_registered, urls_announced,\
     usersEmails_announced , data_rsal_from_url, insert_df_data
     
 from USERS_DFs_forms import return_last_by_keyword_list_urls,\
-     APL_and_Codes, aplname_from_code, report_announced
+     APL_and_Codes,  report_announced
 
 from Telegram_funcs import Send_Telegram_Message, Send_Telegram_Attachments
 from random import randint as rdm
@@ -28,6 +28,19 @@ FROM_email= "constantin@implicareplus.org"
 FROM_name = "Implicare Plus"
 SG_API_Key= configs.SGK1
 
+
+APL_List_all = [x.split(",")[0] for x in dict_APLs["APLs"]]
+APL_Code_all = dict_APLs["Codes"]
+
+print("Lens of APL code and names= ",len(APL_List_all), len(APL_Code_all))
+
+def aplname_from_code(code):
+    try:
+        cod_index= APL_Code_all.index(code)
+        APL_name = APL_List_all[cod_index]
+    except ValueError:
+        APL_name = "_"
+    return APL_name
 
 Template_ids= configs.Template_ids
 Unsub_ids= configs.Unsub_ids
@@ -65,12 +78,6 @@ def decision_send(topic_index):
             if not condition_topic:
                 continue
 
-            
-            
-            
-
-
-
 
             #If emails were sent of the return_last_by_keyword_list_urls
             List_URLs_OF_interest = return_last_by_keyword_list_urls(cod, Filters[topic_index], limit= 200)
@@ -94,7 +101,7 @@ def decision_send(topic_index):
                         TO_name= user_interests["name"]
                         #TODO include a download pdf, and a try in case files do not exist. Also only one file if multiple.
 
-                        APL_Name_0 = aplname_from_code(cod)
+                        APL_Name_0 = aplname_from_code(str(cod))
                         
                         URL_decizie = rsal_url_interest
                         disp_data = data_rsal_from_url(rsal_url_interest)
@@ -114,6 +121,8 @@ def decision_send(topic_index):
                         "APL_Page": APL_Page
                         }
                         Send_SG_with_attachment(TO_email, Template_id, pdf_paths, Unsub_id, groups_to_unsub, template_dict = template_dict_sb)
+                        
+                        print(f"Sent email to {user_email} ({Email_Registered_Unique.index(user_email)}/{len(Email_Registered_Unique)})  for {cod}\n{disp_name}")
 
                         unixtimestamp = int(time())
                         intcod=int(cod)
@@ -140,7 +149,7 @@ def decision_send(topic_index):
                     if condition_channel_telegram and condition_has_telegramid:
                         #>>>Variables
 
-                        APL_Name_0 = aplname_from_code(cod)
+                        APL_Name_0 = aplname_from_code(str(cod))
                         URL_decizie = rsal_url_interest
 
                         disp_data = data_rsal_from_url(rsal_url_interest)
@@ -154,25 +163,35 @@ def decision_send(topic_index):
                         TelegramID = int(user_interests["telegramid"])
                         Text= f"{APL_Name_0}:\n{disp_name} din {data_disp}"
                         #Send_Telegram_Message(configs.Telegram_Constantin, Text)
-                        Send_Telegram_Message(TelegramID, Text)
-                        Send_Telegram_Attachments(TelegramID, pdf_paths)
-
-                        unixtimestamp = int(time())
-                        intcod=int(cod)
-                        TO_name= user_interests["name"]
-                        TelegramID_str = user_interests["telegramid"]
-                        dfx = report_announced(unixtimestamp , TO_name, APL_Name_0, intcod, user_email, rsal_url_interest, "telegram", TelegramID_str)
-                        
-                        insert_df_data(dfx, configs.Table_Users_Announced)
-                        Report_Telegram += 1
-
-                        print(f"Sent Telegram to {TO_name} and registered it")
-                        sleep(rdm(1,2))
-                        nr_rdm = random.randint(1,8)
-                        if nr_rdm == 3:
-                            Text= "Spuneți și prietenilor să se înregistreze pentru a fi informați despre primăria lor:\n\nhttps://bit.ly/Sedinte_Consiliu\n\nUn proiect al A.O. Implicare Plus\nconstantin@implicareplus.org :)"
+                        try:
                             Send_Telegram_Message(TelegramID, Text)
-                            Report_Telegram_Inregistrare += 1
+                            Send_Telegram_Attachments(TelegramID, pdf_paths)
+
+                            unixtimestamp = int(time())
+                            intcod=int(cod)
+                            TO_name= user_interests["name"]
+                            TelegramID_str = user_interests["telegramid"]
+                            dfx = report_announced(unixtimestamp , TO_name, APL_Name_0, intcod, user_email, rsal_url_interest, "telegram", TelegramID_str)
+                            
+                            insert_df_data(dfx, configs.Table_Users_Announced)
+                            Report_Telegram += 1
+
+                            print(f"Sent Telegram to {TO_name} and registered it")
+                            sleep(rdm(1,2))
+                            
+                            
+                            nr_rdm = random.randint(1,40)
+                            if nr_rdm == 3:
+                                Link_formular = "https://forms.gle/hWmVfkMRXHon5SYM6"
+                                Text= f"Spuneți și prietenilor să se înregistreze pentru a fi informați despre primăria lor:\n\n{Link_formular}\n\nUn proiect al A.O. Implicare Plus\nconstantin@implicareplus.org :)"
+                                Send_Telegram_Message(TelegramID, Text)
+                                Report_Telegram_Inregistrare += 1
+                        except Exception as e:
+                            print(e)
+
+
+
+
                 #condition_channel_sms = "sms" in utf(user_interests["channel"].lower())
     
 
