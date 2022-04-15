@@ -1,6 +1,7 @@
 #with engine.connect() as conn:
 
 from email import header
+from shutil import ignore_patterns
 from pytz import timezone
 from sqlalchemy import create_engine
 import configs
@@ -62,7 +63,7 @@ def extract_df_today(date):
     with engine.connect() as conn:
         df_ex = pd.read_sql(query_today_cv, con=conn)
 
-    
+    df_ex = df_ex.drop_duplicates(ignore_index=True)
 
     return df_ex #Might be a bug right here, I am not sure if the df is read continuously...
 
@@ -139,7 +140,6 @@ def best_offer(tip, vorc, valuta, topx):
     valuta ABC
     returs Dataframe with topx biggest values 
     """
-    a=1
 
     dfx = extract_df_today("today")
 
