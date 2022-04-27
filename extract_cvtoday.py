@@ -61,11 +61,12 @@ def extract_df_today(date):
                         FROM public.{configs.Table_Exchange} as exdb
                         left JOIN institutii on (exdb.cod_cursmd = public.{configs.Table_Inst}.cod_cursmd)
                         where data_curs = '{date}'
+                        order by tstamp asc
                         """
     with engine.connect() as conn:
         df_ex = pd.read_sql(query_today_cv, con=conn)
 
-    df_ex = df_ex.drop_duplicates(ignore_index=False, keep="last")
+    df_ex = df_ex.drop_duplicates(subset=df_ex.columns.difference(["cump", "vanz"]) , ignore_index=False, keep="last")
 
     return df_ex #Might be a bug right here, I am not sure if the df is read continuously...
 

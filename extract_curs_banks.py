@@ -63,7 +63,7 @@ for index_date, value_date in enumerate(date_list):
                 Already_Exists+=1
                 print([value_date, value_inst])
                 print("...already exists...")
-                continue
+                #continue
             
             dfx= pd.read_html(f"https://www.curs.md/ro/office/{value_inst}/{value_date}/csv", attrs={'class': 'table table-hover'}, header=None)[0]
             print(f"{'_'*60}\nReading {value_inst}/{value_date}")
