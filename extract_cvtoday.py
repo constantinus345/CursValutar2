@@ -3,13 +3,13 @@
 from email import header
 from shutil import ignore_patterns
 from pytz import timezone
-from sqlalchemy import create_engine
+from sqlalchemy import asc, create_engine
 import configs
 import pandas as pd
 import datetime
 import pause
 import sys
-
+from google_trans import translate_text
 
 engine = create_engine(f"""postgresql://postgres:{configs.DB_password}\
 @localhost:{configs.DB_port}/{configs.Database_CV}""")
@@ -34,18 +34,20 @@ def extract_last_date_indb():
     today_ymd = today_date.strftime("%Y-%m-%d")
     with engine.connect() as conn:
         df_last = pd.read_sql(Q_Last_Day, con=conn)
-    last_day= df_last["data_curs"][0].strftime("%Y-%m-%d")
+    last_day= df_last["data_curs"][0]
     if last_day!=today_ymd:
         print("DB Needs to be updated, Today!=LastDay_inDB")
-        
     return last_day
-
 
 def extract_df_today(date):
     """date can be a whatever string or value, gets validated as %Y-%m-%d"""
     if not validate(date):
         today_date= datetime.datetime.today()
         today_ymd = today_date.strftime("%Y-%m-%d")
+        #print(validate(date))
+        #print(today_ymd)
+    else:
+        today_ymd = date
 
     last_day_db= extract_last_date_indb()
 
@@ -63,9 +65,10 @@ def extract_df_today(date):
     with engine.connect() as conn:
         df_ex = pd.read_sql(query_today_cv, con=conn)
 
-    df_ex = df_ex.drop_duplicates(ignore_index=True)
+    df_ex = df_ex.drop_duplicates(ignore_index=False, keep="last")
 
     return df_ex #Might be a bug right here, I am not sure if the df is read continuously...
+
 
 #df_today = extract_df_today(date="something- hence today")
 
@@ -86,6 +89,8 @@ def valute_lista(tip_institutie):
     
     Lista_Valutelor = df_q2["valuta"].tolist()
     return Lista_Valutelor
+
+#print(valute_lista("banci"))
 
 def string_valute_descriptions(amount, tip_institutie):
     today_date= datetime.datetime.today()
@@ -143,15 +148,16 @@ def best_offer(tip, vorc, valuta, topx):
 
     dfx = extract_df_today("today")
 
+
     dfx_sort_colvalues =dfx.loc[(dfx["tip"].isin([x.lower() for x in tip])) 
                         & (dfx["valuta"].isin([y.upper() for y in valuta]))]
 
     #The bank is interested in the lowest cump price, the customer in largest
     #The bank is interested in the highest vanz price, the customer in smallest
     if "cump" in vorc:
-        dfx_sort_topx = dfx_sort_colvalues.nlargest(topx, columns= vorc, keep="all")
+        dfx_sort_topx = dfx_sort_colvalues.nlargest(topx, columns= vorc, keep="all").sort_values("cump", ascending=False)
     elif "vanz" in vorc:
-        dfx_sort_topx = dfx_sort_colvalues.nsmallest(topx, columns= vorc, keep="all")
+        dfx_sort_topx = dfx_sort_colvalues.nsmallest(topx, columns= vorc, keep="all").sort_values("vanz", ascending=True)
     else:
         dfx_sort_topx=[]
     
@@ -160,86 +166,97 @@ def best_offer(tip, vorc, valuta, topx):
 """df_best_topx = best_offer(tip = ["banci"], vorc = ["vanz"], valuta= ["RON"], topx= 1)
 df_best_topx_cols = df_best_topx.columns.tolist()
 print(df_best_topx_cols)
-
 print(df_best_topx)"""
 
-#TODO Vanzare cumparare String Formatting and other implications
-
-def best_first_offer_dict(tip, vorc, valuta, topx=1):
-    """
-    tip= banci or csv ; 
-    vorc= cump or vanz; 
-    valuta ABC
-    returs Dataframe with topx biggest values 
-    """
 
 
-    dfx_topx = best_offer(tip, vorc, valuta, topx)
+df_best = best_offer(["banci"], ["cump"], ["EUR"], 10)
+
+def replace_bank_names(list_names):
+    for x in range(len(list_names)):
+        if "COMERŢBANK" in list_names[x]:
+            list_names[x]= "COMERŢBANK"
+        elif "ENERGBANK" in list_names[x]:
+            list_names[x]= "ENERGBANK"
+        elif "MAIB " in list_names[x]:
+            list_names[x]= "MAIB "
+        elif "Victoriabank" in list_names[x]:
+            list_names[x]= "Victoriabank"
+        elif "Banca Comercială Română" in list_names[x]:
+            list_names[x]= "BCR"
+        elif "EuroCreditBank" in list_names[x]:
+            list_names[x]= "EuroCreditBank"
+        elif "EXIMBANK" in list_names[x]:
+            list_names[x]= "EXIMBANK"
+        elif "FinComBank " in list_names[x]:
+            list_names[x]= "FinComBank "
+        elif "Moldindconbank" in list_names[x]:
+            list_names[x]= "Moldindconbank"
+        elif "OTP Bank" in list_names[x]:
+            list_names[x]= "OTP Bank"
+        else: 
+            pass
+
+
+    return list_names
+
+def all_curs_str(tip, vorc, valuta, topx=10):
+
+    df_best = best_offer(tip, vorc, valuta, topx)
+    df_best = df_best[df_best["cump"].notna()]
+    df_best = df_best[df_best["vanz"].notna()]
+    Bank_Names = replace_bank_names(df_best["denumire"].tolist())
+    Bank_Cump = df_best["cump"].tolist()
+    Bank_Vanz = df_best["vanz"].tolist()
+    #print(Bank_Names)
+    max_len_name = max(Bank_Names, key= len)
+
+    if "cump" in vorc:
+        Bank_Offer = Bank_Cump
+    else:
+        Bank_Offer = Bank_Vanz
     
-    offer_dic = best_offer(tip, vorc, valuta, topx).to_dict(orient="list")
-    #tip replace?
-    return offer_dic
+    #print(len(Bank_Names), len(Bank_Offer))
+    str_offer = """"""
+    for x in range(len(Bank_Names)):
+        bank_len_name = len(Bank_Names[x])
+        bank_name_diffmax = len(max_len_name) - bank_len_name
+        offer = f"{Bank_Names[x]}{' '*bank_name_diffmax} = {round(int(Bank_Offer[x])/10000,3)}"
+        str_offer += f"{offer}\n"
 
-def generate_text_best_offer(tip, vorc, valuta, topx=1):
-
-    best_dic= best_first_offer_dict(tip, vorc, valuta, topx=1)
-    #print(best_dic)
+    return str_offer
 
 
+
+def generate_top_text(tip, vorc, valuta, topx=1):
+    today_date= datetime.datetime.today()
+    today_ymd = today_date.strftime("%Y-%m-%d")
+    Valuta= valuta[0]
     try:
         if vorc[0] == "cump":
             str_institutie_tip_oferta = tip[0].replace("banci","Banca").replace("csv","Casa de schimb")
-            str_oferta_float = int(best_dic['cump'][0])/10000
-            str_oferta = f"""{str_institutie_tip_oferta} cumpără {valuta[0].upper()} cu {str_oferta_float}
-            \n(Dvs. vindeți {valuta[0].upper()})""".replace("  ","")
+            Text_ro = f"""<b>Dumneavoastră vindeți {Valuta},  \n\n{str_institutie_tip_oferta} cumpără {Valuta}, {today_ymd}:</b>"""
         elif vorc[0] == "vanz":
             str_institutie_tip_oferta = tip[0].replace("banci","Banca").replace("csv","Casa de Schimb")
-            str_oferta_float = int(best_dic['vanz'][0])/10000
-            str_oferta = f"""{str_institutie_tip_oferta} vinde {valuta[0].upper()} cu {str_oferta_float}
-            \n(Dvs. cumpărați {valuta[0].upper()})""".replace("  ","")
+            Text_ro = f"""<b>Dumneavoastră cumpărați {Valuta},  \n\n{str_institutie_tip_oferta} vinde {Valuta}, {today_ymd}:</b>"""
         else:
-            str_oferta= ""
+            str_institutie_tip_oferta= ""
+    
     except Exception as err1:
-        str_oferta= ""
         print(f"!!! Error = {err1}")
 
-    str_institutie_tip = tip[0].replace("banci","bancă").replace("csv","casă de schimb valutar")
-    str_operatiune = vorc[0].replace("vanz", "vânzare").replace("cump", "cumpărare")
-    #Maybe change str_operatiune to opposite, given bank selling= customer buying? Confusing
-    str_valuta = valuta[0].upper()
-    try:
-        str_date = best_dic["data_curs"][0].strftime('%d-%b-%Y')
-    except:
-        str_date = datetime.datetime.now().strftime('%d-%b-%Y')
+    return Text_ro
 
-    nr_institutii= len(best_dic["cump"])
-
-    if nr_institutii == 1:
-        reply_best = f"""Cel mai bun curs valutar pentru Dumneavostră:
-        tipul instituției : {str_institutie_tip}
-        data : {str_date}
-        valuta : {str_valuta}
-        este la {best_dic["denumire"][0]} ({str_institutie_tip})
-        {str_oferta}
-            """.replace("  ","")
+tip = ["banci"]
+vorc = ["cump"]
+valuta = ["EUR"]
+topx = 10
+#print(all_curs_str(tip,vorc, valuta))
+#print(generate_top_text(tip, vorc, valuta))
+#__________________________________________________________________
 
 
-    elif nr_institutii >1:
-        str_denumiri= f"({nr_institutii} instituții):"
-        for index_denumire, val in enumerate(best_dic["denumire"]):
-            str_denumiri += f"\n{val}"
-        
-        reply_best = f"""Cel mai bun curs valutar pentru Dumneavostră::
-        tipul instituției : {str_institutie_tip}
-        data : {str_date}
-        valuta : {str_valuta}
-        {str_denumiri}
-        {str_oferta}
-            """.replace("  ","")
-
-    else: 
-        reply_best= ""
-    return reply_best
+#TODO Vanzare cumparare String Formatting and other implications
 
 if __name__ == "__main__":
     print(f"Executing the main {sys.argv[0]}")

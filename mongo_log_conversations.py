@@ -10,11 +10,6 @@ def Insert_Telegram_Interaction(conv):
     Mongo_mycol = Mongo_mydb[configs.MongoT_Collection]
     x = Mongo_mycol.insert_one(conv)
 
-    #print(myclient.list_database_names())
-    #print(mydb.list_collection_names())
-
-print()
-
 if __name__ == "__main__":
     print("Executing the main")
 else: 

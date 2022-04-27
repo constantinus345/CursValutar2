@@ -16,7 +16,7 @@ today_date = datetime.datetime.today()#.strftime("%Y-%m-%d")
 today_date_str= today_date.strftime("%Y-%m-%d")
 print(today_date_str)
 
-days_historic = 2
+days_historic = 1
 #Generating a list of dates ranged in reverse
 date_list = [today_date - datetime.timedelta(days=x) for x in range(days_historic)]
 date_list = [x.strftime("%Y-%m-%d") for x in date_list]
@@ -42,7 +42,8 @@ with engine.connect() as conn:
 Date_Inst_Exchange_Pairs_List = []
 
 for x, y in zip(df_exchange["data_curs"].tolist(), df_exchange["cod_cursmd"].tolist()):
-    Date_Inst_Exchange_Pairs_List.append([x.strftime("%Y-%m-%d"),y])
+
+    Date_Inst_Exchange_Pairs_List.append([x,y])
 
 df_exchange_columns_list = df_exchange.columns.tolist()
 
