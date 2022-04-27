@@ -20,12 +20,11 @@ os.chdir("D:/Python_Code/CursValutar2")
 
 #print(generate_text_best_offer(tip = ["csv"], vorc = ["cump"], valuta= ["usd"]))
 
-valute_lista= extract_cvtoday.valute_lista("banci")
-valute_lista_str = extract_cvtoday.string_valute_descriptions(10,"banci")
-print(valute_lista_str)
+
 
 def getResponse(user_input):
-    
+    valute_lista= extract_cvtoday.valute_lista("banci")
+    valute_lista_str = extract_cvtoday.string_valute_descriptions(10,"banci")
     error_message_tryagain= f"""Întrebați robotul cel mai bun schimb valutar. Întrebarea Dvs trebuie să fie <b>exact 4 litere</b>, 
     prin care să ziceți dacă doriți să <b>cumpărați (c) sau să vindeți(v)</b>, și <b>codul standart valutei din 3 litere</b>. 
     De exemplu \ncEUR - doriți să cumpărați EURO,\n sau vRON - doriți să vindeți lei românești\n\n{valute_lista_str}""".replace("  ","")
@@ -47,7 +46,7 @@ def getResponse(user_input):
         if user_input.upper()[1:] in valute_lista:
             valuta_user= [user_input.upper()[1:]]
         else: 
-            reply_str_negative= """Codul valutei (mereu de 3 litere) nu se află în lista de opțiuni"""
+            reply_str_negative= f"""Codul valutei (mereu de 3 litere) nu se află în lista de opțiuni.\nBăncile au disponibil azi:\n{valute_lista_str}"""
 
         if (vorc_user[0] in ["cump","vanz"]) and (valuta_user[0] in valute_lista):
             reply_str_positive_banca= extract_cvtoday.generate_text_best_offer(tip = ["banci"], 
